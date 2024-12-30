@@ -1,16 +1,11 @@
 #include <iostream>
-#include <unistd.h> // For chdir(), fork(), execvp() ,pid_t
+#include <unistd.h>   // For chdir(), fork(), execvp() ,pid_t
 #include <sys/wait.h> // For waitpid() and associated macros
 #include <cstdio>     // For getchar(), perror()
 #include <cstdlib>    //For exit(), malloc(), realloc(), and free(), EXIT_SUCCESS, EXIT_FAILURE
-#include <cstring> //strcmp(), strtok()
+#include <cstring>    //strcmp(), strtok()
 
-#include"Buildins_com.hpp"
-
-
-
-
-
+#include "Buildins_com.hpp"
 
 #define SH_RL_BUFSIZE 1024
 char *read_line()
@@ -58,6 +53,32 @@ char *read_line()
         }
     }
 }
+
+// or i could have used the getline which also does the same
+
+// char *read_line()
+// {
+//     size_t bufferSize = 0;
+//     char *buffer = nullptr;
+
+//     ssize_t nread = getline(&buffer, &bufferSize, stdin);
+//     if (nread == -1)
+//     {
+//         if (feof(stdin)) // Check if EOF was reached
+//         {
+//             std::cout << "End of input (EOF) reached.\n";
+//             free(buffer);       // Free any memory allocated by getline
+//             exit(EXIT_SUCCESS); // Gracefully exit when EOF is reached
+//         }
+//         else // An error occurred
+//         {
+//             std::cerr << "sh: error reading line\n";
+//             free(buffer);       // Free any memory allocated by getline
+//             exit(EXIT_FAILURE); // Exit on error
+//         }
+//     }
+//     return buffer;
+// }
 
 // for parsing the line into arguments
 
