@@ -88,43 +88,171 @@ char *read_line()
 // delimiters (often abbreviated as delim) are characters or sequences of characters used to separate or mark the boundaries
 // between different parts of a string.
 
+// Here are some common escape sequences that are widely used in shells and programming languages:
+
+// \n: Newline – moves to the next line.
+// \t: Tab – adds a tab space.
+// \\: Backslash – allows you to include an actual backslash in your string.
+// \': Single quote – allows you to include a single quote inside single-quoted strings.
+// \": Double quote – allows you to include a double quote inside double-quoted strings.
+// \r: Carriage return – moves the cursor to the beginning of the line.
+// \b: Backspace – moves the cursor one character back.
+
+// char **get_args(char *line)
+// {
+//     int buffersize = SH_TOK_BUFSIZE;
+//     size_t position = 0;
+//     char **tokens = (char **)malloc(sizeof(char *) * buffersize);
+//     char *token, **temp_tokens;
+
+//     if (!token)
+//     {
+//         std::cerr << "sh: allocation error\n";
+//         exit(EXIT_FAILURE);
+//     }
+
+//     token = strtok(line, SH_TOK_DELIM);
+//     while (token != NULL)
+//     {
+//         tokens[position] = token;
+//         position++;
+
+//         if (position >= buffersize)
+//         {
+//             buffersize += SH_TOK_BUFSIZE;
+//             temp_tokens = tokens;
+//             tokens = (char **)realloc(tokens, sizeof(char) * buffersize);
+//             if (!tokens)
+//             {
+//                 free(line);
+//                 free(temp_tokens);
+//                 std::cerr << "sh: allocation error\n";
+//                 exit(EXIT_FAILURE);
+//             }
+//         }
+
+//         token = strtok(NULL, SH_TOK_DELIM);
+//     }
+//     tokens[position] = NULL;
+//     return tokens;
+// }
+
+// the above code Only have whitespace separating arguments, no quoting or backslash escaping.
+// so in the code bellow i have also introduced the quoting and backslash escaping
+
+#define SH_TOK_BUFSIZE 64
+#define SH_TOK_DELIM " \t\r\n\a"
+
+// Function to handle backslash escaping and quoting
 char **get_args(char *line)
 {
     int buffersize = SH_TOK_BUFSIZE;
     size_t position = 0;
     char **tokens = (char **)malloc(sizeof(char *) * buffersize);
-    char *token, **temp_tokens;
+    int token_buffer = SH_TOK_BUFSIZE;
+    char *current_token = (char *)malloc(sizeof(char) * token_buffer);
+    int current_pos = 0;
+    bool in_single_quote = false, in_double_quote = false;
 
-    if (!token)
+    if (!tokens || !current_token)
     {
         std::cerr << "sh: allocation error\n";
         exit(EXIT_FAILURE);
     }
 
-    token = strtok(line, SH_TOK_DELIM);
-    while (token != NULL)
+    // Start processing the line
+    for (size_t i = 0; line[i] != '\0'; i++)
     {
-        tokens[position] = token;
-        position++;
+        char c = line[i];
 
-        if (position >= buffersize)
+        // Handle backslash escape
+        if (c == '\\' && (line[i + 1] != '\0'))
         {
-            buffersize += SH_TOK_BUFSIZE;
-            temp_tokens = tokens;
-            tokens = (char **)realloc(tokens, sizeof(char) * buffersize);
-            if (!tokens)
+            i++; // Skip the backslash and include the next character
+            current_token[current_pos++] = line[i];
+            continue;
+        }
+
+        // Handle single quote
+        if (c == '\'' && !in_double_quote)
+        {
+            in_single_quote = !in_single_quote;
+            continue;
+        }
+
+        // Handle double quote
+        if (c == '"' && !in_single_quote)
+        {
+            in_double_quote = !in_double_quote;
+            continue;
+        }
+
+        // If it's a delimiter and not inside quotes, finalize the current token
+        if (strchr(SH_TOK_DELIM, c) && !in_single_quote && !in_double_quote)
+        {
+            if (current_pos > 0)
+            {
+                current_token[current_pos] = '\0';          // Null-terminate the current token
+                tokens[position++] = strdup(current_token); // Save the token
+                current_pos = 0;                            // Reset for next token
+            }
+        }
+        else
+        {
+            // Otherwise, add the character to the current token
+            current_token[current_pos++] = c;
+        }
+
+        // Resize current_token buffer if needed
+        if (current_pos >= token_buffer)
+        {
+            token_buffer += SH_TOK_BUFSIZE;
+            current_token = (char *)realloc(current_token, sizeof(char) * token_buffer);
+            if (!current_token)
             {
                 free(line);
-                free(temp_tokens);
+                free(tokens);
                 std::cerr << "sh: allocation error\n";
                 exit(EXIT_FAILURE);
             }
         }
 
-        token = strtok(NULL, SH_TOK_DELIM);
+        // Resize tokens array if needed
+        if (position >= buffersize)
+        {
+            buffersize += SH_TOK_BUFSIZE;
+            char **temp_tokens = tokens;
+            tokens = (char **)realloc(tokens, sizeof(char *) * buffersize);
+            if (!tokens)
+            {
+                free(line);
+                free(current_token);
+                free(temp_tokens);
+                std::cerr << "sh: allocation error\n";
+                exit(EXIT_FAILURE);
+            }
+        }
     }
+
+    // lets take an example (echo hello) the above code will take place the echo in the first index of tokens where the above for loop exits
+    // with out placing the last commad as there is no more delim left so we need to push the last command in the tokkens which will be hello
+    // in this case
+
+    if (current_pos > 0)
+    {
+        current_token[current_pos] = '\0';
+        tokens[position++] = strdup(current_token);
+    }
+
+    // Null-terminate the arguments array
     tokens[position] = NULL;
-    return tokens;
+
+    // kepping in mind the above example
+    // after this the tokens array will become tokkens = {echo\0 , hello\0 , NULL }
+
+    // Free allocated memory
+    free(current_token); // Free the current_token buffer
+    return tokens;       // Return the tokens array
 }
 
 int sh_launch(char **args)
@@ -248,26 +376,3 @@ int main(int argc, char **args)
 {
     shell_loop();
 }
-
-// -------------------------------------shell buildins--------------------------------------
-/*
-You may have noticed that the lsh_loop() function calls lsh_execute(), but above, we titled our function lsh_launch(). This
-was intentional! You see, most commands a shell executes are programs, but not all of them. Some of them are built right into the shell.
-
--------------why cd must be an shell buildins
-The reason is actually pretty simple. If you want to change directory, you need to use the function chdir(). The thing is, the
-current directory is a property of a process. So, if you wrote a program called cd that changed directory, it would just change
-its own current directory, and then terminate. Its parent process’s current directory would be unchanged. Instead, the shell process
-itself needs to execute chdir(), so that its own current directory is updated. Then, when it launches child processes, they will
-inherit that directory too.
-
-
-Similarly, if there was a program named exit, it wouldn’t be able to exit the shell that called it. That command also needs to
-be built into the shell. Also, most shells are configured by running configuration scripts, like ~/.bashrc. Those scripts use
-commands that change the operation of the shell. These commands could only change the shell’s operation if they were implemented
-within the shell process itself.
-
-So, it makes sense that we need to add some commands to the shell itself. The ones I added to my shell are cd, exit, and help.
-
-
-*/

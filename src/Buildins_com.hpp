@@ -1,3 +1,25 @@
+// -------------------------------------shell buildins--------------------------------------
+/*
+You may have noticed that the lsh_loop() function calls lsh_execute(), but above, we titled our function lsh_launch(). This
+was intentional! You see, most commands a shell executes are programs, but not all of them. Some of them are built right into the shell.
+
+-------------why cd must be an shell buildins
+The reason is actually pretty simple. If you want to change directory, you need to use the function chdir(). The thing is, the
+current directory is a property of a process. So, if you wrote a program called cd that changed directory, it would just change
+its own current directory, and then terminate. Its parent process’s current directory would be unchanged. Instead, the shell process
+itself needs to execute chdir(), so that its own current directory is updated. Then, when it launches child processes, they will
+inherit that directory too.
+
+
+Similarly, if there was a program named exit, it wouldn’t be able to exit the shell that called it. That command also needs to
+be built into the shell. Also, most shells are configured by running configuration scripts, like ~/.bashrc. Those scripts use
+commands that change the operation of the shell. These commands could only change the shell’s operation if they were implemented
+within the shell process itself.
+
+So, it makes sense that we need to add some commands to the shell itself. The ones I added to my shell are cd, exit, and help.
+
+
+*/
 
 // build in declarasions of build in commands
 int sh_cd(char **args);
