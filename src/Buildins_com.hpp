@@ -64,7 +64,7 @@ int sh_cd(char **args)
 int sh_help(char **args)
 {
     int i;
-    std::cout << "Muhammad Bilal shell\n";
+    std::cout << "Noob's shell\n";
     std::cout << "Type program names and arguments, and hit enter.\n";
     std::cout << "The following are built in:\n";
 
